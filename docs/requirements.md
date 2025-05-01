@@ -1,11 +1,13 @@
 # Cattle Health Monitoring System - Backend Development Knowledge Base
 
 ## System Overview
+
 Backend system supporting IoT-based cattle health monitoring with real-time data processing, alerts, and user management.
 
 ## Core Components
 
 ### 1. Server Architecture
+
 - Express.js with TypeScript
 - WebSocket support for real-time updates
 - Integration with AWS services
@@ -13,6 +15,7 @@ Backend system supporting IoT-based cattle health monitoring with real-time data
 - Redis for caching and sessions
 
 ### 2. AWS Infrastructure
+
 - IoT Core for device communication
 - Kinesis for data streaming
 - Lambda for real-time processing
@@ -25,12 +28,13 @@ Backend system supporting IoT-based cattle health monitoring with real-time data
 #### MongoDB Collections
 
 1. **Users**
+
 ```typescript
 interface User {
   _id: ObjectId;
   email: string;
   passwordHash: string;
-  role: 'farmer' | 'admin' | 'vet';
+  role: "farmer" | "admin" | "vet";
   farmId: string;
   name: string;
   phone: string;
@@ -38,7 +42,7 @@ interface User {
   lastLogin: Date;
 }
 
-Cattle
+Cattle;
 interface Cattle {
   _id: ObjectId;
   farmId: string;
@@ -46,15 +50,15 @@ interface Cattle {
   deviceId?: string;
   breed: string;
   dateOfBirth: Date;
-  gender: 'male' | 'female';
-  status: 'active' | 'inactive';
+  gender: "male" | "female";
+  status: "active" | "inactive";
   healthRecords: HealthRecord[];
   notes: Note[];
   createdAt: Date;
   updatedAt: Date;
 }
 
-Farms
+Farms;
 interface Farm {
   _id: ObjectId;
   name: string;
@@ -68,11 +72,13 @@ interface Farm {
 ```
 
 ### DynamoDB Tables
+
 CattleTelemetryRecent
+
 ```ts
 interface TelemetryRecord {
-  cattleId: string;      // Partition Key
-  timestamp: number;     // Sort Key
+  cattleId: string; // Partition Key
+  timestamp: number; // Sort Key
   temperature: number;
   motion: number;
   pulseRate: number;
@@ -81,28 +87,31 @@ interface TelemetryRecord {
     lng: number;
   };
   batteryLevel: number;
-  ttl: number;          // Auto-deletion after 24h
+  ttl: number; // Auto-deletion after 24h
 }
 ```
 
 CattleAlerts
+
 ```ts
 interface Alert {
-  cattleId: string;     // Partition Key
-  timestamp: number;    // Sort Key
-  type: 'health' | 'device' | 'location';
-  severity: 'low' | 'medium' | 'high';
+  cattleId: string; // Partition Key
+  timestamp: number; // Sort Key
+  type: "health" | "device" | "location";
+  severity: "low" | "medium" | "high";
   metric: string;
   value: number;
   threshold: number | [number, number];
-  status: 'new' | 'acknowledged' | 'resolved';
+  status: "new" | "acknowledged" | "resolved";
   acknowledgedBy?: string;
   acknowledgedAt?: number;
 }
 ```
 
 ## 4. API Endpoints
+
 Authentication
+
 ```
 POST   /api/auth/login
 POST   /api/auth/register
@@ -112,6 +121,7 @@ POST   /api/auth/reset-password
 ```
 
 User Management
+
 ```
 GET    /api/users/me
 PUT    /api/users/me
@@ -122,6 +132,7 @@ DELETE /api/users/:id      [Admin]
 ```
 
 Cattle Management
+
 ```
 GET    /api/cattle
 POST   /api/cattle
@@ -134,6 +145,7 @@ GET    /api/cattle/:id/alerts
 ```
 
 Device Management
+
 ```
 GET    /api/devices
 POST   /api/devices/register
@@ -144,6 +156,7 @@ GET    /api/devices/:id/status
 ```
 
 Alert Management
+
 ```
 GET    /api/alerts
 PUT    /api/alerts/:id/acknowledge
@@ -152,51 +165,55 @@ POST   /api/alerts/rules
 ```
 
 ## 5. Real-time Features
+
 WebSocket Events
+
 ```ts
 // Client -> Server
 interface ClientEvents {
-  'subscribe-cattle': (cattleId: string) => void;
-  'unsubscribe-cattle': (cattleId: string) => void;
+  "subscribe-cattle": (cattleId: string) => void;
+  "unsubscribe-cattle": (cattleId: string) => void;
 }
 
 // Server -> Client
 interface ServerEvents {
-  'telemetry-update': (data: TelemetryData) => void;
-  'alert-notification': (alert: Alert) => void;
+  "telemetry-update": (data: TelemetryData) => void;
+  "alert-notification": (alert: Alert) => void;
 }
 ```
 
 6. Data Processing Rules
-Alert Thresholds
+   Alert Thresholds
+
 ```ts
 interface AlertRule {
-  metric: 'temperature' | 'motion' | 'pulseRate';
-  condition: 'gt' | 'lt' | 'between';
+  metric: "temperature" | "motion" | "pulseRate";
+  condition: "gt" | "lt" | "between";
   threshold: number | [number, number];
   duration: number; // seconds
-  severity: 'low' | 'medium' | 'high';
+  severity: "low" | "medium" | "high";
 }
 
 const defaultRules: AlertRule[] = [
   {
-    metric: 'temperature',
-    condition: 'between',
+    metric: "temperature",
+    condition: "between",
     threshold: [38.0, 39.5],
     duration: 300,
-    severity: 'medium'
+    severity: "medium",
   },
   {
-    metric: 'pulseRate',
-    condition: 'between',
+    metric: "pulseRate",
+    condition: "between",
     threshold: [60, 120],
     duration: 300,
-    severity: 'high'
-  }
+    severity: "high",
+  },
 ];
 ```
 
 ## 7. Security Requirements
+
 - Authentication
 - JWT-based authentication
 - Token refresh mechanism
@@ -214,6 +231,7 @@ const defaultRules: AlertRule[] = [
 - XSS protection
 
 ## 8. Performance Considerations
+
 - Caching Strategy
 - Redis for session data
 - Redis for frequently accessed cattle data
@@ -228,6 +246,7 @@ const defaultRules: AlertRule[] = [
 - Memory usage optimization
 
 ## 9. Monitoring Requirements
+
 - System Health
 - API endpoint response times
 - WebSocket connection count
@@ -240,6 +259,7 @@ const defaultRules: AlertRule[] = [
 - User engagement metrics
 
 ## 10. Development Guidelines
+
 - Code Organization
 - Follow repository pattern
 - Service layer abstraction
@@ -257,6 +277,7 @@ const defaultRules: AlertRule[] = [
 - Deployment guide
 
 ## 11. Deployment Considerations
+
 - Environment Setup
 - Development
 - Staging
