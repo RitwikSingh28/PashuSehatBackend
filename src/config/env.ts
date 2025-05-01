@@ -18,6 +18,9 @@ const envSchema = z.object({
   DYNAMODB_TOKENS_TABLE: z.string().default("cattle-health-tokens"),
   DYNAMODB_OTP_TABLE: z.string().default("cattle-health-otp"),
 
+  // SNS Configuration
+  SNS_TOPIC_ARN: z.string(),
+
   // JWT Configuration
   JWT_ACCESS_SECRET: z.string().default("dev-access-secret"),
   JWT_REFRESH_SECRET: z.string().default("dev-refresh-secret"),

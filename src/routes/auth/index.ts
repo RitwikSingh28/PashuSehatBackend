@@ -145,4 +145,27 @@ router.post("/token/refresh", async (req, res, next) => {
   }
 });
 
+/**
+ * Delete user (for testing purposes)
+ * DELETE /auth/user
+ * Query params:
+ * - userId: string (optional)
+ * - phoneNumber: string (optional)
+ * At least one of userId or phoneNumber must be provided
+ */
+router.delete("/user", async (req, res, next) => {
+  try {
+    const { userId, phoneNumber } = req.query as { userId?: string; phoneNumber?: string };
+
+    if (!userId && !phoneNumber) {
+      throw new AppError(400, "Either userId or phoneNumber is required", ErrorCodes.INVALID_INPUT);
+    }
+
+    await AuthService.deleteUser({ userId, phoneNumber });
+    res.json({ message: "User deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

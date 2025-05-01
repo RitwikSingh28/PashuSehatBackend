@@ -2,13 +2,14 @@ import { docClient, sns, TABLES } from "#config/aws.js";
 import { AppError, ErrorCodes } from "#utils/errors.js";
 import type { OTPRecord } from "#types/auth.js";
 import { generateOTP } from "#utils/validators.js";
+import env from "#config/env.js";
 
 const OTP_EXPIRY = 10 * 60 * 1000; // 10 minutes
 const MAX_ATTEMPTS = 3;
 
 export const OTPService = {
   /**
-   * Generate and send OTP to a phone number
+   * Generate and send OTP to a phone number via SNS Topic
    */
   async generateAndSendOTP(phoneNumber: string): Promise<void> {
     const otp = generateOTP();
@@ -28,11 +29,18 @@ export const OTPService = {
       Item: otpRecord,
     });
 
-    // Send OTP via SNS
+    // Log OTP in development mode (but still send it)
+    if (env.NODE_ENV === "development") {
+      console.log(`[DEV] OTP for ${phoneNumber}: ${otp}`);
+    }
+
+    // Send OTP via SNS Topic
     try {
+      const message = `Your PashuSehat verification code is: ${otp}. Valid for 10 minutes.`;
+
       await sns.publish({
-        PhoneNumber: phoneNumber,
-        Message: `Your PashuSehat verification code is: ${otp}. Valid for 10 minutes.`,
+        TopicArn: env.SNS_TOPIC_ARN,
+        Message: message,
       });
     } catch (error) {
       console.error("Failed to send OTP:", error);

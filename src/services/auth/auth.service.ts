@@ -14,6 +14,7 @@ import type {
   ResetPasswordRequest,
   SignupRequest,
   VerifyPhoneRequest,
+  RefreshToken,
 } from "#types/auth.js";
 
 // Helper functions
@@ -26,6 +27,19 @@ async function updateLastLogin(userId: string): Promise<void> {
       ":now": Date.now(),
     },
   });
+}
+
+async function findUserByPhone(phoneNumber: string): Promise<User | undefined> {
+  const result = await docClient.query({
+    TableName: TABLES.USERS,
+    IndexName: "PhoneNumberIndex",
+    KeyConditionExpression: "phoneNumber = :phone",
+    ExpressionAttributeValues: {
+      ":phone": phoneNumber,
+    },
+  });
+
+  return result.Items?.[0] as User | undefined;
 }
 
 export const AuthService = {
@@ -45,16 +59,9 @@ export const AuthService = {
     }
 
     // Check if phone number already exists
-    const existingUser = await docClient.query({
-      TableName: TABLES.USERS,
-      IndexName: "PhoneNumberIndex",
-      KeyConditionExpression: "phoneNumber = :phone",
-      ExpressionAttributeValues: {
-        ":phone": phoneNumber,
-      },
-    });
+    const existingUser = await findUserByPhone(phoneNumber);
 
-    if (existingUser.Items?.length) {
+    if (existingUser) {
       throw new AppError(409, "Phone number already registered", ErrorCodes.DUPLICATE_PHONE);
     }
 
@@ -95,16 +102,7 @@ export const AuthService = {
     await OTPService.verifyOTP(phoneNumber, data.otp);
 
     // Find user
-    const result = await docClient.query({
-      TableName: TABLES.USERS,
-      IndexName: "PhoneNumberIndex",
-      KeyConditionExpression: "phoneNumber = :phone",
-      ExpressionAttributeValues: {
-        ":phone": phoneNumber,
-      },
-    });
-
-    const user = result.Items?.[0] as User | undefined;
+    const user = await findUserByPhone(phoneNumber);
 
     if (!user) {
       throw new AppError(404, "User not found", ErrorCodes.USER_NOT_FOUND);
@@ -149,16 +147,7 @@ export const AuthService = {
     }
 
     // Find user by phone number
-    const result = await docClient.query({
-      TableName: TABLES.USERS,
-      IndexName: "PhoneNumberIndex",
-      KeyConditionExpression: "phoneNumber = :phone",
-      ExpressionAttributeValues: {
-        ":phone": phoneNumber,
-      },
-    });
-
-    const user = result.Items?.[0] as User | undefined;
+    const user = await findUserByPhone(phoneNumber);
 
     if (!user?.passwordHash) {
       throw new AppError(401, "Invalid credentials", ErrorCodes.INVALID_CREDENTIALS);
@@ -200,16 +189,7 @@ export const AuthService = {
     await OTPService.verifyOTP(phoneNumber, data.otp);
 
     // Find user
-    const result = await docClient.query({
-      TableName: TABLES.USERS,
-      IndexName: "PhoneNumberIndex",
-      KeyConditionExpression: "phoneNumber = :phone",
-      ExpressionAttributeValues: {
-        ":phone": phoneNumber,
-      },
-    });
-
-    const user = result.Items?.[0] as User | undefined;
+    const user = await findUserByPhone(phoneNumber);
 
     if (!user) {
       throw new AppError(404, "User not found", ErrorCodes.USER_NOT_FOUND);
@@ -288,5 +268,59 @@ export const AuthService = {
       accessToken,
       refreshToken: newRefreshToken,
     };
+  },
+
+  async deleteUser(identifier: { userId?: string; phoneNumber?: string }): Promise<void> {
+    let user: User | undefined;
+
+    if (identifier.phoneNumber) {
+      const phoneNumber = formatPhoneNumber(identifier.phoneNumber);
+      user = await findUserByPhone(phoneNumber);
+    } else if (identifier.userId) {
+      const result = await docClient.get({
+        TableName: TABLES.USERS,
+        Key: { userId: identifier.userId },
+      });
+      user = result.Item as User | undefined;
+    } else {
+      throw new AppError(400, "Either userId or phoneNumber is required", ErrorCodes.INVALID_INPUT);
+    }
+
+    if (!user) {
+      throw new AppError(404, "User not found", ErrorCodes.USER_NOT_FOUND);
+    }
+
+    // Delete all refresh tokens for the user
+    const tokenResult = await docClient.scan({
+      TableName: TABLES.TOKENS,
+      FilterExpression: "userId = :userId",
+      ExpressionAttributeValues: {
+        ":userId": user.userId,
+      },
+    });
+
+    const tokens = tokenResult.Items as RefreshToken[] | undefined;
+    if (tokens?.length) {
+      await Promise.all(
+        tokens.map((token) =>
+          docClient.delete({
+            TableName: TABLES.TOKENS,
+            Key: { tokenId: token.tokenId },
+          }),
+        ),
+      );
+    }
+
+    // Delete any pending OTP
+    await docClient.delete({
+      TableName: TABLES.OTP,
+      Key: { phoneNumber: user.phoneNumber },
+    });
+
+    // Finally, delete the user
+    await docClient.delete({
+      TableName: TABLES.USERS,
+      Key: { userId: user.userId },
+    });
   },
 };
