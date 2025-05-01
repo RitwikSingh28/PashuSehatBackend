@@ -1,5 +1,4 @@
 import { docClient, sns, TABLES } from "#config/aws.js";
-import env from "#config/env.js";
 import { AppError, ErrorCodes } from "#utils/errors.js";
 import type { OTPRecord } from "#types/auth.js";
 import { generateOTP } from "#utils/validators.js";
@@ -28,12 +27,6 @@ export const OTPService = {
       TableName: TABLES.OTP,
       Item: otpRecord,
     });
-
-    // In development, just log the OTP
-    if (env.NODE_ENV === "development") {
-      console.log(`[DEV] OTP for ${phoneNumber}: ${otp}`);
-      return;
-    }
 
     // Send OTP via SNS
     try {

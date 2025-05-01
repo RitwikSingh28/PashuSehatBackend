@@ -1,13 +1,13 @@
-export type UserRole = "farmer" | "admin" | "vet";
-
 export interface User {
   userId: string;
   phoneNumber: string;
-  passwordHash?: string; // Optional because OTP users won't have a password
-  role: UserRole;
-  farmId?: string;
+  passwordHash: string;
   name: string;
-  profilePicture?: string; // S3 key
+  farmLocation: {
+    address: string; // Max 120 characters
+    pinCode: string;
+  };
+  isVerified: boolean;
   createdAt: number;
   lastLogin: number;
 }
@@ -36,6 +36,19 @@ export interface LoginResponse {
 }
 
 // Request types
+export interface SignupRequest {
+  phoneNumber: string;
+  name: string;
+  password: string;
+  farmAddress: string; // Max 120 characters
+  pinCode: string;
+}
+
+export interface VerifyPhoneRequest {
+  phoneNumber: string;
+  otp: string;
+}
+
 export interface PhonePasswordLoginRequest {
   phoneNumber: string;
   password: string;

@@ -1,9 +1,54 @@
 import { Router } from "express";
 import { AuthService } from "#services/auth/auth.service.js";
 import { AppError, ErrorCodes } from "#utils/errors.js";
-import type { PhonePasswordLoginRequest, PhoneOTPLoginRequest, RequestOTPRequest, ResetPasswordRequest } from "#types/auth.js";
+import type {
+  PhonePasswordLoginRequest,
+  PhoneOTPLoginRequest,
+  RequestOTPRequest,
+  ResetPasswordRequest,
+  SignupRequest,
+  VerifyPhoneRequest,
+} from "#types/auth.js";
 
 const router = Router();
+
+/**
+ * Sign up a new user
+ * POST /auth/signup
+ */
+router.post("/signup", async (req, res, next) => {
+  try {
+    const data = req.body as SignupRequest;
+
+    if (!data.phoneNumber || !data.name || !data.password || !data.farmAddress || !data.pinCode) {
+      throw new AppError(400, "All fields are required", ErrorCodes.INVALID_INPUT);
+    }
+
+    const response = await AuthService.signup(data);
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * Verify phone number with OTP
+ * POST /auth/verify
+ */
+router.post("/verify", async (req, res, next) => {
+  try {
+    const data = req.body as VerifyPhoneRequest;
+
+    if (!data.phoneNumber || !data.otp) {
+      throw new AppError(400, "Phone number and OTP are required", ErrorCodes.INVALID_INPUT);
+    }
+
+    const response = await AuthService.verifyPhone(data);
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+});
 
 /**
  * Login with phone and password

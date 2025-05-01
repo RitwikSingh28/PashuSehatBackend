@@ -17,8 +17,8 @@ export const TokenService = {
     return jwt.sign(
       {
         userId: user.userId,
-        role: user.role,
-        farmId: user.farmId,
+        isVerified: user.isVerified,
+        farmLocation: user.farmLocation,
       },
       env.JWT_ACCESS_SECRET as Secret,
       options,
