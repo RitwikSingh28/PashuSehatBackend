@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { docClient, TABLES } from "#config/aws.js";
 import env from "#config/env.js";
 import { AppError, ErrorCodes } from "#utils/errors.js";
-import type { User, RefreshToken } from "#types/auth.js";
+import type { User, RefreshToken, AccessTokenPayload } from "#types/auth.js";
 
 export const TokenService = {
   /**
@@ -14,15 +14,13 @@ export const TokenService = {
       expiresIn: env.JWT_ACCESS_EXPIRY as jwt.SignOptions["expiresIn"],
     };
 
-    return jwt.sign(
-      {
-        userId: user.userId,
-        isVerified: user.isVerified,
-        farmLocation: user.farmLocation,
-      },
-      env.JWT_ACCESS_SECRET as Secret,
-      options,
-    );
+    const payload: Omit<AccessTokenPayload, "iat" | "exp"> = {
+      userId: user.userId,
+      isVerified: user.isVerified,
+      farmLocation: user.farmLocation,
+    };
+
+    return jwt.sign(payload, env.JWT_ACCESS_SECRET as Secret, options);
   },
 
   /**
@@ -59,10 +57,10 @@ export const TokenService = {
   /**
    * Verify and decode an access token
    */
-  verifyAccessToken(token: string): jwt.JwtPayload {
+  verifyAccessToken(token: string): AccessTokenPayload {
     try {
       const decoded = jwt.verify(token, env.JWT_ACCESS_SECRET as Secret);
-      return decoded as jwt.JwtPayload;
+      return decoded as AccessTokenPayload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         throw new AppError(401, "Access token expired", ErrorCodes.TOKEN_EXPIRED);

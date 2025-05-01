@@ -15,6 +15,7 @@ import type {
   SignupRequest,
   VerifyPhoneRequest,
   RefreshToken,
+  AccessTokenPayload,
 } from "#types/auth.js";
 
 // Helper functions
@@ -322,5 +323,31 @@ export const AuthService = {
       TableName: TABLES.USERS,
       Key: { userId: user.userId },
     });
+  },
+
+  async logout(accessToken: string): Promise<void> {
+    // Verify access token
+    const decoded: AccessTokenPayload = TokenService.verifyAccessToken(accessToken);
+
+    // Delete all refresh tokens for the user
+    const tokenResult = await docClient.scan({
+      TableName: TABLES.TOKENS,
+      FilterExpression: "userId = :userId",
+      ExpressionAttributeValues: {
+        ":userId": decoded.userId,
+      },
+    });
+
+    const tokens = tokenResult.Items as RefreshToken[] | undefined;
+    if (tokens?.length) {
+      await Promise.all(
+        tokens.map((token) =>
+          docClient.delete({
+            TableName: TABLES.TOKENS,
+            Key: { tokenId: token.tokenId },
+          }),
+        ),
+      );
+    }
   },
 };

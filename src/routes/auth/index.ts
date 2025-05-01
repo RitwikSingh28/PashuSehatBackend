@@ -168,4 +168,25 @@ router.delete("/user", async (req, res, next) => {
   }
 });
 
+/**
+ * Logout user
+ * POST /auth/logout
+ * Requires Authorization header with Bearer token
+ */
+router.post("/logout", async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader?.startsWith("Bearer ")) {
+      throw new AppError(401, "No token provided", ErrorCodes.INVALID_TOKEN);
+    }
+
+    const accessToken = authHeader.split(" ")[1];
+    await AuthService.logout(accessToken);
+    res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

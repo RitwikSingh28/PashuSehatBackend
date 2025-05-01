@@ -21,6 +21,17 @@ export interface RefreshToken {
   createdAt: number;
 }
 
+export interface AccessTokenPayload {
+  userId: string;
+  isVerified: boolean;
+  farmLocation: {
+    address: string;
+    pinCode: string;
+  };
+  iat?: number;
+  exp?: number;
+}
+
 export interface OTPRecord {
   phoneNumber: string;
   otp: string;
