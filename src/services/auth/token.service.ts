@@ -2,7 +2,7 @@ import jwt, { SignOptions, Secret } from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { docClient, TABLES } from "#config/aws.js";
 import env from "#config/env.js";
-import { AppError, ErrorCodes } from "#utils/errors.js";
+import { AppError } from "#utils/errors.js";
 import type { User, RefreshToken, AccessTokenPayload } from "#types/auth.js";
 
 export const TokenService = {
@@ -16,9 +16,13 @@ export const TokenService = {
 
     const payload: Omit<AccessTokenPayload, "iat" | "exp"> = {
       userId: user.userId,
+      phoneNumber: user.phoneNumber,
       isVerified: user.isVerified,
       farmLocation: user.farmLocation,
     };
+
+    // Debug log
+    console.log("Creating token with payload:", payload);
 
     return jwt.sign(payload, env.JWT_ACCESS_SECRET as Secret, options);
   },
@@ -63,9 +67,9 @@ export const TokenService = {
       return decoded as AccessTokenPayload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
-        throw new AppError(401, "Access token expired", ErrorCodes.TOKEN_EXPIRED);
+        throw new AppError(401, "Access token expired", "TOKEN_EXPIRED");
       }
-      throw new AppError(401, "Invalid access token", ErrorCodes.INVALID_TOKEN);
+      throw new AppError(401, "Invalid access token", "INVALID_TOKEN");
     }
   },
 
@@ -81,20 +85,19 @@ export const TokenService = {
         Key: { tokenId: decoded.tokenId },
       });
 
-      const refreshToken = result.Item as RefreshToken | undefined;
-
-      if (!refreshToken) {
-        throw new AppError(401, "Invalid refresh token", ErrorCodes.INVALID_TOKEN);
+      const refreshToken = result.Item as RefreshToken;
+      if (result.Item === undefined) {
+        throw new AppError(401, "Invalid refresh token", "INVALID_TOKEN");
       }
 
       if (refreshToken.expiresAt < Date.now()) {
-        throw new AppError(401, "Refresh token expired", ErrorCodes.TOKEN_EXPIRED);
+        throw new AppError(401, "Refresh token expired", "TOKEN_EXPIRED");
       }
 
       return refreshToken;
     } catch (error) {
       if (error instanceof AppError) throw error;
-      throw new AppError(401, "Invalid refresh token", ErrorCodes.INVALID_TOKEN);
+      throw new AppError(401, "Invalid refresh token", "INVALID_TOKEN");
     }
   },
 
@@ -111,13 +114,13 @@ export const TokenService = {
       },
     });
 
-    const tokens = result.Items as RefreshToken[] | undefined;
-    if (tokens?.length) {
+    const tokens = result.Items as RefreshToken[];
+    if (tokens.length > 0) {
       await Promise.all(
-        tokens.map((item) =>
+        tokens.map((token) =>
           docClient.delete({
             TableName: TABLES.TOKENS,
-            Key: { tokenId: item.tokenId },
+            Key: { tokenId: token.tokenId },
           }),
         ),
       );

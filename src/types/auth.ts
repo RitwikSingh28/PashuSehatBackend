@@ -24,6 +24,7 @@ export interface RefreshToken {
 export interface AccessTokenPayload {
   userId: string;
   isVerified: boolean;
+  phoneNumber: string;
   farmLocation: {
     address: string;
     pinCode: string;

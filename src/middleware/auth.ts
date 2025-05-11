@@ -1,59 +1,41 @@
 import { Request, Response, NextFunction } from "express";
+import { AppError } from "#utils/errors.js";
 import { TokenService } from "#services/auth/token.service.js";
-import { AppError, ErrorCodes } from "#utils/errors.js";
 
-// Extend Express Request type
-type RequestWithUser = Request & {
+// Extend Request type to include user
+interface RequestWithUser extends Request {
   user?: {
     userId: string;
+    phoneNumber: string;
     isVerified: boolean;
     farmLocation: {
       address: string;
       pinCode: string;
     };
   };
-};
+}
 
 /**
- * Middleware to verify JWT access token
+ * Authentication middleware
  */
-export const authenticate = (req: RequestWithUser, _res: Response, next: NextFunction) => {
+export const authenticate = (req: RequestWithUser, _res: Response, next: NextFunction): void => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader?.startsWith("Bearer ")) {
-      throw new AppError(401, "No token provided", ErrorCodes.INVALID_TOKEN);
+      throw new AppError(401, "No token provided", "UNAUTHORIZED");
     }
 
     const token = authHeader.split(" ")[1];
-    const decoded = TokenService.verifyAccessToken(token) as {
-      userId: string;
-      isVerified: boolean;
-      farmLocation: {
-        address: string;
-        pinCode: string;
-      };
+    const decoded = TokenService.verifyAccessToken(token);
+
+    // Add user to request object
+    req.user = {
+      userId: decoded.userId,
+      phoneNumber: decoded.phoneNumber,
+      isVerified: decoded.isVerified,
+      farmLocation: decoded.farmLocation,
     };
-
-    req.user = decoded;
-    next();
-  } catch (error) {
-    next(error);
-  }
-};
-
-/**
- * Middleware to check if user is verified
- */
-export const requireVerified = (req: RequestWithUser, _res: Response, next: NextFunction) => {
-  try {
-    if (!req.user) {
-      throw new AppError(401, "Not authenticated", ErrorCodes.INVALID_TOKEN);
-    }
-
-    if (!req.user.isVerified) {
-      throw new AppError(403, "Phone number not verified", ErrorCodes.INVALID_INPUT);
-    }
 
     next();
   } catch (error) {

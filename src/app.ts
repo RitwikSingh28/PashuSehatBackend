@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import authRoutes from "#routes/auth/index.js";
+import adminRoutes from "#routes/admin.routes.js";
 import { errorHandler } from "#middleware/error-handler.js";
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Error handling
 app.use(errorHandler);
