@@ -21,6 +21,7 @@ const envSchema = z.object({
   DYNAMODB_TOKENS_TABLE: z.string(),
   DYNAMODB_OTP_TABLE: z.string(),
   DYNAMODB_TAGS_TABLE: z.string(),
+  DYNAMODB_CATTLE_TABLE: z.string(),
 
   // S3
   S3_BUCKET_NAME: z.string(),
@@ -33,12 +34,5 @@ const envSchema = z.object({
 });
 
 const env = envSchema.parse(process.env);
-
-// Debug log environment variables
-console.log("Environment Variables:", {
-  adminPhones: env.ADMIN_PHONE_NUMBERS,
-  parsedPhones: env.ADMIN_PHONE_NUMBERS?.split(",") ?? [],
-  nodeEnv: env.NODE_ENV,
-});
 
 export default env;

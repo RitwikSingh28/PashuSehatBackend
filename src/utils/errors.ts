@@ -21,6 +21,13 @@ export const ErrorCodes = {
   USER_NOT_FOUND: "USER_NOT_FOUND",
   DUPLICATE_PHONE: "DUPLICATE_PHONE",
 
+  // Tag related errors
+  TAG_NOT_FOUND: "TAG_NOT_FOUND",
+  TAG_ALREADY_ASSIGNED: "TAG_ALREADY_ASSIGNED",
+
+  // Cattle related errors
+  CATTLE_NOT_FOUND: "CATTLE_NOT_FOUND",
+
   // System errors
   INTERNAL_ERROR: "INTERNAL_ERROR",
 } as const;
