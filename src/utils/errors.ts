@@ -28,6 +28,11 @@ export const ErrorCodes = {
   // Cattle related errors
   CATTLE_NOT_FOUND: "CATTLE_NOT_FOUND",
 
+  // Alert related errors
+  ALERT_NOT_FOUND: "ALERT_NOT_FOUND",
+  ALREADY_ACKNOWLEDGED: "ALREADY_ACKNOWLEDGED",
+  INVALID_OPERATION: "INVALID_OPERATION",
+
   // System errors
   INTERNAL_ERROR: "INTERNAL_ERROR",
 } as const;

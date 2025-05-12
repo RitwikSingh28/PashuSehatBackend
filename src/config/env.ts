@@ -23,6 +23,7 @@ const envSchema = z.object({
   DYNAMODB_TAGS_TABLE: z.string(),
   DYNAMODB_CATTLE_TABLE: z.string(),
   DYNAMODB_TELEMETRY_TABLE: z.string(),
+  DYNAMODB_ALERTS_TABLE: z.string(),
 
   // S3
   S3_BUCKET_NAME: z.string(),
