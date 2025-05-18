@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { AppError } from "#utils/errors.js";
 import tagService from "#services/tag.service.js";
+import cattleService from "#services/cattle.service.js";
 
 interface RegisterTagsRequest extends Request {
   body: {
@@ -50,6 +51,48 @@ export class AdminController {
     try {
       const tags = await tagService.listTags();
       res.status(200).json(tags);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Unassign a tag from any cattle (Admin only)
+   */
+  async unassignTag(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { tagId } = req.params;
+
+      // First check if tag exists
+      const tag = await tagService.getTag(tagId);
+      if (!tag) {
+        throw new AppError(404, "Tag not found", "TAG_NOT_FOUND");
+      }
+
+      // If tag is already unassigned, return success
+      if (!tag.isAssigned) {
+        res.status(200).json({
+          message: "Tag is already unassigned",
+          tag,
+        });
+        return;
+      }
+
+      // Check if tag is assigned to any cattle
+      const cattle = await cattleService.getCattleByTagId(tagId);
+      if (cattle) {
+        // Delete the cattle record
+        await cattleService.deleteCattle(cattle.cattleId);
+      }
+
+      // Update tag status to unassigned
+      const updatedTag = await tagService.updateTagStatus(tagId, false);
+
+      res.status(200).json({
+        message: "Tag unassigned successfully",
+        tag: updatedTag,
+        cattleDeleted: cattle ? true : false,
+      });
     } catch (error) {
       next(error);
     }

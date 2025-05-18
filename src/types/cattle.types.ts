@@ -1,13 +1,19 @@
+export type AgeGroup = "CALF" | "ADULT" | "RETIRED";
+export type Gender = "MALE" | "FEMALE";
+
 export interface Cattle {
   cattleId: string; // UUID for the cattle
   userId: string; // Owner's user ID
   tagId: string; // Associated collar tag ID
   name: string; // Name of the cattle
-  age: number; // Age in months
-  gender: "male" | "female"; // Gender
+  dateOfBirth: number; // Timestamp of birth date
+  gender: Gender; // Gender of the cattle
+  ageGroup: AgeGroup; // Age classification
   breed: string; // Breed type
-  healthStatus: "healthy" | "sick" | "under_observation";
+  governmentId?: string; // Optional government registration ID
+  fatherName?: string; // Optional father's name
+  motherName?: string; // Optional mother's name
   createdAt: number; // Creation timestamp
   updatedAt: number; // Last update timestamp
-  notes?: string; // Optional notes about the cattle
+  notes: string[]; // List of notes about the cattle
 }

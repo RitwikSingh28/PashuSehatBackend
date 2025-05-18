@@ -7,19 +7,17 @@ import { z } from "zod";
 const createCattleSchema = z.object({
   tagId: z.string(),
   name: z.string(),
-  age: z.number().positive(),
-  gender: z.enum(["male", "female"]),
+  dateOfBirth: z.string().transform((val) => new Date(val).getTime()),
+  gender: z.enum(["MALE", "FEMALE"]),
+  ageGroup: z.enum(["CALF", "ADULT", "RETIRED"]),
   breed: z.string(),
-  notes: z.string().optional(),
+  governmentId: z.string().optional(),
+  fatherName: z.string().optional(),
+  motherName: z.string().optional(),
+  notes: z.array(z.string()).default([]),
 });
 
-const updateCattleSchema = z.object({
-  name: z.string().optional(),
-  age: z.number().positive().optional(),
-  breed: z.string().optional(),
-  healthStatus: z.enum(["healthy", "sick", "under_observation"]).optional(),
-  notes: z.string().optional(),
-});
+const updateCattleSchema = createCattleSchema.partial();
 
 export class CattleController {
   /**
@@ -37,15 +35,7 @@ export class CattleController {
       const validatedData = createCattleSchema.parse(req.body);
 
       // Create the cattle
-      const cattle = await cattleService.createCattle(
-        userId,
-        validatedData.tagId,
-        validatedData.name,
-        validatedData.age,
-        validatedData.gender,
-        validatedData.breed,
-        validatedData.notes,
-      );
+      const cattle = await cattleService.createCattle(userId, validatedData);
 
       res.status(201).json(cattle);
     } catch (error) {
@@ -120,6 +110,38 @@ export class CattleController {
 
       // Update the cattle
       const updatedCattle = await cattleService.updateCattle(cattleId, validatedData);
+
+      res.status(200).json(updatedCattle);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Add a note to cattle
+   */
+  async addNote(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { cattleId } = req.params;
+      const { note } = req.body as { note?: string };
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        throw new AppError(401, "Authentication required", "UNAUTHORIZED");
+      }
+
+      if (!note) {
+        throw new AppError(400, "Note is required", "INVALID_INPUT");
+      }
+
+      // Check if the cattle exists and belongs to the user
+      const existingCattle = await cattleService.getCattle(cattleId);
+      if (!existingCattle || existingCattle.userId !== userId) {
+        throw new AppError(404, "Cattle not found", "CATTLE_NOT_FOUND");
+      }
+
+      // Add the note
+      const updatedCattle = await cattleService.addNote(cattleId, note);
 
       res.status(200).json(updatedCattle);
     } catch (error) {

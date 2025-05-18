@@ -1,24 +1,37 @@
 import { v4 as uuidv4 } from "uuid";
 import { docClient, TABLES } from "#config/aws.js";
 import { AppError } from "#utils/errors.js";
-import { Cattle } from "#types/cattle.types.js";
+import type { Cattle } from "#types/cattle.types.js";
 import tagService from "#services/tag.service.js";
+import { z } from "zod";
+
+// Validation schemas
+const createCattleSchema = z.object({
+  tagId: z.string(),
+  name: z.string(),
+  dateOfBirth: z.number(),
+  gender: z.enum(["MALE", "FEMALE"]),
+  ageGroup: z.enum(["CALF", "ADULT", "RETIRED"]),
+  breed: z.string(),
+  governmentId: z.string().optional(),
+  fatherName: z.string().optional(),
+  motherName: z.string().optional(),
+  notes: z.array(z.string()).default([]),
+});
+
+type CreateCattleInput = z.infer<typeof createCattleSchema>;
+type UpdateCattleInput = Partial<CreateCattleInput>;
 
 export class CattleService {
   /**
    * Register a new cattle
    */
-  async createCattle(
-    userId: string,
-    tagId: string,
-    name: string,
-    age: number,
-    gender: "male" | "female",
-    breed: string,
-    notes?: string,
-  ): Promise<Cattle> {
+  async createCattle(userId: string, data: unknown): Promise<Cattle> {
+    // Validate input data
+    const validatedData = createCattleSchema.parse(data);
+
     // First check if tag exists and is available
-    const tag = await tagService.getTag(tagId);
+    const tag = await tagService.getTag(validatedData.tagId);
     if (!tag) {
       throw new AppError(404, "The specified tag ID does not exist", "TAG_NOT_FOUND");
     }
@@ -33,15 +46,18 @@ export class CattleService {
     const cattle: Cattle = {
       cattleId,
       userId,
-      tagId,
-      name,
-      age,
-      gender,
-      breed,
-      healthStatus: "healthy", // Default status
+      tagId: validatedData.tagId,
+      name: validatedData.name,
+      dateOfBirth: validatedData.dateOfBirth,
+      gender: validatedData.gender,
+      ageGroup: validatedData.ageGroup,
+      breed: validatedData.breed,
+      governmentId: validatedData.governmentId,
+      fatherName: validatedData.fatherName,
+      motherName: validatedData.motherName,
+      notes: validatedData.notes,
       createdAt: now,
       updatedAt: now,
-      notes,
     };
 
     // Create cattle in DynamoDB
@@ -51,7 +67,7 @@ export class CattleService {
     });
 
     // Update tag to mark it as assigned
-    await tagService.updateTagStatus(tagId, true);
+    await tagService.updateTagStatus(validatedData.tagId, true);
 
     return cattle;
   }
@@ -103,17 +119,7 @@ export class CattleService {
   /**
    * Update cattle information
    */
-  async updateCattle(
-    cattleId: string,
-    updates: {
-      name?: string;
-      age?: number;
-      breed?: string;
-      healthStatus?: "healthy" | "sick" | "under_observation";
-      notes?: string;
-    },
-  ): Promise<Cattle | null> {
-    // Build update expression dynamically based on what fields are provided
+  async updateCattle(cattleId: string, updates: UpdateCattleInput): Promise<Cattle | null> {
     const updateExpressions: string[] = ["#updatedAt = :updatedAt"];
     const expressionAttributeValues: Record<string, unknown> = {
       ":updatedAt": Date.now(),
@@ -137,6 +143,29 @@ export class CattleService {
       UpdateExpression: `SET ${updateExpressions.join(", ")}`,
       ExpressionAttributeValues: expressionAttributeValues,
       ExpressionAttributeNames: expressionAttributeNames,
+      ReturnValues: "ALL_NEW",
+    });
+
+    return result.Attributes as Cattle | null;
+  }
+
+  /**
+   * Add a note to cattle
+   */
+  async addNote(cattleId: string, note: string): Promise<Cattle | null> {
+    const result = await docClient.update({
+      TableName: TABLES.CATTLE,
+      Key: { cattleId },
+      UpdateExpression: "SET #notes = list_append(if_not_exists(#notes, :empty_list), :new_note), #updatedAt = :updatedAt",
+      ExpressionAttributeNames: {
+        "#notes": "notes",
+        "#updatedAt": "updatedAt",
+      },
+      ExpressionAttributeValues: {
+        ":new_note": [note],
+        ":empty_list": [],
+        ":updatedAt": Date.now(),
+      },
       ReturnValues: "ALL_NEW",
     });
 

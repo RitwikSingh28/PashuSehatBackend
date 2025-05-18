@@ -27,7 +27,12 @@ const listTagsHandler: RequestHandler = async (req, res, next) => {
   await adminController.listTags(req, res, next);
 };
 
+const unassignTagHandler: RequestHandler = async (req, res, next) => {
+  await adminController.unassignTag(req, res, next);
+};
+
 router.post("/tags", registerTagsHandler);
 router.get("/tags", listTagsHandler);
+router.post("/tags/:tagId/unassign", unassignTagHandler);
 
 export default router;
