@@ -42,7 +42,7 @@ class SocketService {
     });
 
     this.setupSocketHandlers();
-    console.log('Socket.IO server initialized');
+    console.log('[Socket] Server initialized on port:', server.address()?.toString() ?? 'unknown');
   }
 
   private setupSocketHandlers(): void {
@@ -50,6 +50,7 @@ class SocketService {
       console.log(`Socket connected: ${socket.id}`);
 
       // Initialize tracking for this socket
+      console.log(`[Socket:${socket.id}] Initializing socket tracking`);
       this.socketToCattle.set(socket.id, new Set());
 
       // Handle subscribe request
@@ -57,19 +58,23 @@ class SocketService {
         try {
           const { cattleId, userId } = data;
 
+          console.log(`[Socket:${socket.id}] Subscribe request - CattleID: ${cattleId}, UserID: ${userId}`);
+
           if (!cattleId || !userId) {
+            console.error(`[Socket:${socket.id}] Missing cattleId or userId in subscribe request`);
             socket.emit('error', { message: 'Missing cattleId or userId' });
             return;
           }
 
           // Verify cattle belongs to user
           const cattle = await this.getCattleById(cattleId);
+          console.log(`[Socket:${socket.id}] Cattle lookup result:`, cattle);
+
           if (!cattle || cattle.userId !== userId) {
+            console.error(`[Socket:${socket.id}] Cattle not found or unauthorized - CattleID: ${cattleId}`);
             socket.emit('error', { message: 'Cattle not found or unauthorized' });
             return;
           }
-
-          console.log(`Socket ${socket.id} subscribing to cattle ${cattleId}`);
 
           // Add to subscription maps
           if (!this.activeSubscriptions.has(cattleId)) {
@@ -82,11 +87,13 @@ class SocketService {
             subscribers.add(socket.id);
             socketSubs.add(cattleId);
 
+            console.log(`[Socket:${socket.id}] Successfully subscribed to cattle ${cattleId}. Total subscribers: ${subscribers.size}`);
+
             // Start polling if first subscriber
             if (subscribers.size === 1) {
               void this.startPollingData(cattleId);
             } else {
-              // Send latest data right away if we have other subscribers
+              console.log(`[Socket:${socket.id}] Additional subscriber - fetching current data`);
               void this.fetchAndSendTelemetryData(cattleId);
             }
           }
@@ -98,6 +105,7 @@ class SocketService {
 
       // Handle unsubscribe
       socket.on('unsubscribe-cattle', (cattleId: string) => {
+        console.log(`[Socket:${socket.id}] Unsubscribe request - CattleID: ${cattleId}`);
         this.unsubscribeSocket(socket.id, cattleId);
       });
 
@@ -111,6 +119,7 @@ class SocketService {
   private async getCattleById(cattleId: string) {
     try {
       interface CattleItem {
+        id: string;
         cattleId: string;
         userId: string;
         tagId: string;
@@ -121,7 +130,7 @@ class SocketService {
         Key: { cattleId }
       });
 
-      return result.Item as CattleItem | undefined;
+      console.log(`[DB] Cattle lookup result for ${cattleId}:`, result.Item);
     } catch (error) {
       console.error('Error getting cattle by ID:', error);
       return null;
@@ -133,7 +142,7 @@ class SocketService {
       return; // Polling already active
     }
 
-    console.log(`Starting polling for cattle ${cattleId}`);
+    console.log(`[Polling] Starting for cattle ${cattleId}`);
 
     // Fetch data immediately on subscription
     await this.fetchAndSendTelemetryData(cattleId);
@@ -152,7 +161,7 @@ class SocketService {
       // First get the tag ID for this cattle
       const cattle = await this.getCattleById(cattleId);
       if (!cattle) {
-        console.error(`Cattle ${cattleId} not found`);
+        console.error(`[Telemetry] Cattle ${cattleId} not found for telemetry fetch`);
         return;
       }
 
@@ -160,6 +169,7 @@ class SocketService {
 
       // Get latest telemetry data (last 10 records)
       const endTime = Date.now();
+      console.log(`[Telemetry] Fetching data for tagId ${tagId} from ${new Date(startTime).toISOString()} to ${new Date(endTime).toISOString()}`);
       const startTime = endTime - (10 * 60 * 1000); // Last 10 minutes
 
       const result = await docClient.query({
@@ -177,15 +187,19 @@ class SocketService {
         Limit: 10
       });
 
+      console.log(`[Telemetry] Query result for ${tagId}:`, result.Items);
+
       // Send the latest data point if available
       if (result.Items && result.Items.length > 0) {
         const latestReading = result.Items[0] as TelemetryData;
+        console.log(`[Telemetry] Latest reading for ${tagId}:`, latestReading);
 
         const subscribers = this.activeSubscriptions.get(cattleId);
         if (subscribers && subscribers.size > 0) {
           console.log(`Sending telemetry update to ${String(subscribers.size)} clients for cattle ${cattleId}`);
 
           // Send to all subscribers
+          console.log(`[Telemetry] Broadcasting to ${subscribers.size} subscribers`);
           subscribers.forEach(socketId => {
             this.io.to(socketId).emit('telemetry-update', {
               ...latestReading // latestReading already contains cattleId
@@ -194,7 +208,7 @@ class SocketService {
         }
       }
     } catch (error) {
-      console.error(`Error fetching telemetry data for ${cattleId}:`, error);
+      console.error(`[Telemetry] Error fetching data for ${cattleId}:`, error);
     }
   }
 
@@ -217,6 +231,8 @@ class SocketService {
         Limit: 5
       });
 
+      console.log(`[Alerts] Query result for ${cattleId}:`, result.Items);
+
       if (result.Items && result.Items.length > 0) {
         const subscribers = this.activeSubscriptions.get(cattleId);
         if (subscribers && subscribers.size > 0) {
@@ -229,7 +245,7 @@ class SocketService {
         }
       }
     } catch (error) {
-      console.error(`Error fetching alerts for ${cattleId}:`, error);
+      console.error(`[Alerts] Error fetching alerts for ${cattleId}:`, error);
     }
   }
 
@@ -252,7 +268,7 @@ class SocketService {
       subscribedCattle.delete(cattleId);
     }
 
-    console.log(`Socket ${socketId} unsubscribed from cattle ${cattleId}`);
+    console.log(`[Socket:${socketId}] Unsubscribed from cattle ${cattleId}`);
   }
 
   private handleSocketDisconnect(socketId: string): void {
@@ -274,7 +290,7 @@ class SocketService {
   private stopPollingData(cattleId: string): void {
     const interval = this.activePollers.get(cattleId);
     if (interval) {
-      console.log(`Stopping polling for cattle ${cattleId}`);
+      console.log(`[Polling] Stopping for cattle ${cattleId}`);
       clearInterval(interval);
       this.activePollers.delete(cattleId);
     }
