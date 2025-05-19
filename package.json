@@ -9,12 +9,9 @@
     "start": "node --env-file .env dist/index.js",
     "build": "tsc",
     "type-check": "tsc --noEmit",
-    "lint": "eslint .",
-    "lint:fix": "eslint --fix .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
@@ -29,8 +26,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
     "express": "^5.1.0",
-    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
+    "socket.io": "^4.7.4",
     "zod": "^3.24.3"
   },
   "devDependencies": {
@@ -42,8 +39,7 @@
     "@types/express": "^5.0.1",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.3",
-    "eslint": "^9.25.1",
-    "husky": "^9.1.7",
+    "@types/socket.io": "^3.0.2",
     "lint-staged": "^15.5.1",
     "prettier": "^3.5.3",
     "tsx": "^4.19.4",
@@ -52,14 +48,5 @@
   },
   "imports": {
     "#*": "./src/*"
-  },
-  "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
-      "eslint",
-      "prettier --check"
-    ],
-    "*.{json,yml,yaml}": [
-      "prettier --check"
-    ]
   }
 }
