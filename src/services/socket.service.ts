@@ -119,7 +119,6 @@ class SocketService {
   private async getCattleById(cattleId: string) {
     try {
       interface CattleItem {
-        id: string;
         cattleId: string;
         userId: string;
         tagId: string;
@@ -130,7 +129,7 @@ class SocketService {
         Key: { cattleId }
       });
 
-      console.log(`[DB] Cattle lookup result for ${cattleId}:`, result.Item);
+      return result.Item as CattleItem | undefined;
     } catch (error) {
       console.error('Error getting cattle by ID:', error);
       return null;
@@ -169,8 +168,9 @@ class SocketService {
 
       // Get latest telemetry data (last 10 records)
       const endTime = Date.now();
-      console.log(`[Telemetry] Fetching data for tagId ${tagId} from ${new Date(startTime).toISOString()} to ${new Date(endTime).toISOString()}`);
       const startTime = endTime - (10 * 60 * 1000); // Last 10 minutes
+      console.log(`[Telemetry] Fetching data for tagId ${tagId} from ${new Date(startTime).toISOString()} to ${new Date(endTime).toISOString()}`);
+
 
       const result = await docClient.query({
         TableName: TABLES.TELEMETRY,
