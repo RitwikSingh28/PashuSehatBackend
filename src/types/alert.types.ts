@@ -3,6 +3,7 @@ export interface Alert {
   userId: string;
   cattleId: string;
   tagId: string;
+  cattleName: string;  // Added cattle name
   timestamp: number;
   type: "temperature" | "pulseRate" | "motion" | "battery";
   severity: "low" | "medium" | "high";

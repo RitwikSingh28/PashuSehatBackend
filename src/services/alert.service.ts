@@ -66,6 +66,7 @@ export class AlertService {
       FilterExpression: filterExpressions.length > 0 ? filterExpressions.join(" AND ") : undefined,
       ExpressionAttributeValues: expressionAttributeValues,
       ExpressionAttributeNames: Object.keys(expressionAttributeNames).length > 0 ? expressionAttributeNames : undefined,
+      Limit: 50,
       ScanIndexForward: false, // newest first
     });
 
@@ -109,6 +110,7 @@ export class AlertService {
       FilterExpression: filterExpressions.length > 0 ? filterExpressions.join(" AND ") : undefined,
       ExpressionAttributeValues: expressionAttributeValues,
       ExpressionAttributeNames: Object.keys(expressionAttributeNames).length > 0 ? expressionAttributeNames : undefined,
+      Limit: 50,
       ScanIndexForward: false, // newest first
     });
 
