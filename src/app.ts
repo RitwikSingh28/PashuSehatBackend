@@ -8,7 +8,6 @@ import cattleRoutes from "#routes/cattle.routes.js";
 import telemetryRoutes from "#routes/telemetry.routes.js";
 import alertRoutes from "#routes/alert.routes.js";
 import { errorHandler } from "#middleware/error-handler.js";
-import socketService from "#services/socket.service.js";
 
 const app = express();
 const server = createServer(app);
@@ -28,8 +27,5 @@ app.use("/api/alerts", alertRoutes);
 
 // Error handling
 app.use(errorHandler);
-
-// Initialize Socket.IO
-socketService.initialize(server);
 
 export { app, server };

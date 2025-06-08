@@ -45,7 +45,13 @@ class SocketService {
     });
 
     this.setupSocketHandlers();
-    console.log('[Socket] Server initialized on port:', server.address()?.toString() ?? 'unknown');
+
+    const addr = server.address();
+    if (addr && typeof addr === 'object') {
+      console.log('[Socket] Server initialized on port:', addr.port);
+    } else {
+      console.log('[Socket] Server address:', addr);
+    }
   }
 
   private setupSocketHandlers(): void {
