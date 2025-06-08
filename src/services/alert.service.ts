@@ -179,8 +179,14 @@ export class AlertService {
     // Fetch telemetry data for each unique tagId
     const enrichedAlerts: AlertWithTelemetry[] = [];
     for (const [tagId, tagAlerts] of tagGroups) {
-      const readings = await telemetryService.getRecentTelemetry(tagId, 10);
-      tagAlerts.forEach(alert => enrichedAlerts.push({ ...alert, recentTelemetry: readings }));
+      // For each alert, get telemetry data from 10 minutes before the alert
+      for (const alert of tagAlerts) {
+        const endTime = alert.timestamp;
+        const startTime = endTime - (10 * 60 * 1000); // 10 minutes before alert
+        const readings = await telemetryService.getRecentTelemetry(tagId, 10, startTime, endTime);
+        enrichedAlerts.push({ ...alert, recentTelemetry: readings });
+      }
+
     }
 
     return enrichedAlerts.sort((a, b) => b.timestamp - a.timestamp);

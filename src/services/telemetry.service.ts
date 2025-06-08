@@ -6,16 +6,16 @@ export class TelemetryService {
   /**
    * Get recent telemetry for a specific tag
    */
-  async getRecentTelemetry(tagId: string, minutes = 10): Promise<TelemetryReading[]> {
+  async getRecentTelemetry(tagId: string, minutes = 10, startTime?: number, endTime?: number): Promise<TelemetryReading[]> {
     // Validate input
     if (minutes <= 0 || minutes > 1440) {
       // Max 24 hours
       throw new AppError(400, "Minutes must be between 1 and 1440", "INVALID_INPUT");
     }
 
-    const endTime = Date.now();
-    const startTime = endTime - minutes * 60 * 1000;
-
+    const now = Date.now();
+    const queryStartTime = startTime ?? (now - minutes * 60 * 1000);
+    const queryEndTime = endTime ?? now;
     const result = await docClient.query({
       TableName: TABLES.TELEMETRY,
       KeyConditionExpression: "tagId = :tagId AND #ts BETWEEN :start AND :end",
@@ -24,8 +24,8 @@ export class TelemetryService {
       },
       ExpressionAttributeValues: {
         ":tagId": tagId,
-        ":start": startTime,
-        ":end": endTime,
+        ":start": queryStartTime,
+        ":end": queryEndTime,
       },
       ScanIndexForward: true, // ascending order by timestamp
     });
