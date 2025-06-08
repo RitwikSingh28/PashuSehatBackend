@@ -16,9 +16,9 @@ while true; do
     # Get current timestamp
     TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-    # Generate random temperature between 38.0 and 41.0
-    TEMP_WHOLE=$((38 + RANDOM % 3))
-    TEMP_DECIMAL=$((RANDOM % 100))
+    # Generate random temperature between 100°F and 105°F (normal cattle temp range in Fahrenheit)
+    TEMP_WHOLE=$((100 + RANDOM % 5))
+    TEMP_DECIMAL=$((RANDOM % 10))
     TEMPERATURE="$TEMP_WHOLE.$TEMP_DECIMAL"
     
     # Generate random pulse rate between 60 and 120

@@ -52,6 +52,7 @@ export class AlertService {
     const expressionAttributeValues: Record<string, unknown> = {
       ":userId": userId,
     };
+    let keyConditionExpression = "userId = :userId";
 
     const filterExpressions: string[] = [];
     const expressionAttributeNames: Record<string, string> = {};
@@ -65,7 +66,7 @@ export class AlertService {
 
     // Add time range if provided
     if (startTime && endTime) {
-      filterExpressions.push("#ts BETWEEN :startTime AND :endTime");
+      keyConditionExpression += " AND #ts BETWEEN :startTime AND :endTime";
       expressionAttributeValues[":startTime"] = startTime;
       expressionAttributeValues[":endTime"] = endTime;
       expressionAttributeNames["#ts"] = "timestamp";
@@ -74,7 +75,7 @@ export class AlertService {
     const result = await docClient.query({
       TableName: TABLES.ALERTS,
       IndexName: "UserIdIndex",
-      KeyConditionExpression: "userId = :userId",
+      KeyConditionExpression: keyConditionExpression,
       FilterExpression: filterExpressions.length > 0 ? filterExpressions.join(" AND ") : undefined,
       ExpressionAttributeValues: expressionAttributeValues,
       ExpressionAttributeNames: Object.keys(expressionAttributeNames).length > 0 ? expressionAttributeNames : undefined,
@@ -96,6 +97,7 @@ export class AlertService {
     const expressionAttributeValues: Record<string, unknown> = {
       ":cattleId": cattleId,
     };
+    let keyConditionExpression = "cattleId = :cattleId";
 
     const filterExpressions: string[] = [];
     const expressionAttributeNames: Record<string, string> = {};
@@ -109,7 +111,7 @@ export class AlertService {
 
     // Add time range if provided
     if (startTime && endTime) {
-      filterExpressions.push("#ts BETWEEN :startTime AND :endTime");
+      keyConditionExpression += " AND #ts BETWEEN :startTime AND :endTime";
       expressionAttributeValues[":startTime"] = startTime;
       expressionAttributeValues[":endTime"] = endTime;
       expressionAttributeNames["#ts"] = "timestamp";
@@ -118,7 +120,7 @@ export class AlertService {
     const result = await docClient.query({
       TableName: TABLES.ALERTS,
       IndexName: "CattleIdIndex",
-      KeyConditionExpression: "cattleId = :cattleId",
+      KeyConditionExpression: keyConditionExpression,
       FilterExpression: filterExpressions.length > 0 ? filterExpressions.join(" AND ") : undefined,
       ExpressionAttributeValues: expressionAttributeValues,
       ExpressionAttributeNames: Object.keys(expressionAttributeNames).length > 0 ? expressionAttributeNames : undefined,
