@@ -1,6 +1,7 @@
 import { docClient, TABLES } from "#config/aws.js";
 import { AppError } from "#utils/errors.js";
 import { Alert } from "#types/alert.types.js";
+import telemetryService from "#services/telemetry.service.js";
 import { z } from "zod";
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
 
@@ -15,6 +16,17 @@ const timeRangeSchema = z
   });
 
 const statusSchema = z.enum(["new", "acknowledged", "all"]).optional();
+
+interface AlertWithTelemetry extends Alert {
+  recentTelemetry: Array<{
+    timestamp: number;
+    temperature: number;
+    pulseRate: number;
+    motionData: number;
+    batteryLevel?: number;
+  }>;
+}
+
 
 export class AlertService {
   /**
@@ -32,7 +44,7 @@ export class AlertService {
   /**
    * Get all alerts for a user
    */
-  async getAlertsForUser(userId: string, status?: "new" | "acknowledged" | "all", startTime?: number, endTime?: number): Promise<Alert[]> {
+  async getAlertsForUser(userId: string, status?: "new" | "acknowledged" | "all", startTime?: number, endTime?: number): Promise<AlertWithTelemetry[]> {
     // Validate inputs
     statusSchema.parse(status);
     timeRangeSchema.parse({ startTime, endTime });
@@ -70,13 +82,13 @@ export class AlertService {
       ScanIndexForward: false, // newest first
     });
 
-    return (result.Items ?? []) as Alert[];
+    return this.enrichAlertsWithTelemetry(result.Items as Alert[]);
   }
 
   /**
    * Get alerts for a specific cattle
    */
-  async getAlertsForCattle(cattleId: string, status?: "new" | "acknowledged" | "all", startTime?: number, endTime?: number): Promise<Alert[]> {
+  async getAlertsForCattle(cattleId: string, status?: "new" | "acknowledged" | "all", startTime?: number, endTime?: number): Promise<AlertWithTelemetry[]> {
     // Validate inputs
     statusSchema.parse(status);
     timeRangeSchema.parse({ startTime, endTime });
@@ -114,7 +126,7 @@ export class AlertService {
       ScanIndexForward: false, // newest first
     });
 
-    return (result.Items ?? []) as Alert[];
+    return this.enrichAlertsWithTelemetry(result.Items as Alert[]);
   }
 
   /**
@@ -150,6 +162,28 @@ export class AlertService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Enrich alerts with recent telemetry data
+   */
+  private async enrichAlertsWithTelemetry(alerts: Alert[]): Promise<AlertWithTelemetry[]> {
+    // Group alerts by tagId to minimize telemetry service calls
+    const tagGroups = new Map<string, Alert[]>();
+    alerts.forEach(alert => {
+      const group = tagGroups.get(alert.tagId) || [];
+      group.push(alert);
+      tagGroups.set(alert.tagId, group);
+    });
+
+    // Fetch telemetry data for each unique tagId
+    const enrichedAlerts: AlertWithTelemetry[] = [];
+    for (const [tagId, tagAlerts] of tagGroups) {
+      const readings = await telemetryService.getRecentTelemetry(tagId, 10);
+      tagAlerts.forEach(alert => enrichedAlerts.push({ ...alert, recentTelemetry: readings }));
+    }
+
+    return enrichedAlerts.sort((a, b) => b.timestamp - a.timestamp);
   }
 }
 
