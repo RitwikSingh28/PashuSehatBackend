@@ -1,16 +1,21 @@
 #!/bin/bash
 
 # Configuration
-TAG_ID="XYZ87654321"
+TAG_ID="ABC12345678"
 AWS_REGION="ap-south-1"
 TOPIC="cattle/$TAG_ID/telemetry"
 BATTERY_LEVEL=90  # Initial battery level
+INTERVAL=60  # 1 minute interval
 
 echo "Starting IoT Telemetry Simulator"
+echo "Sending data every $INTERVAL seconds"
 echo "Press Ctrl+C to stop"
 echo "-------------------------------"
 
 while true; do
+    # Get current timestamp
+    TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
+
     # Generate random temperature between 38.0 and 41.0
     TEMP_WHOLE=$((38 + RANDOM % 3))
     TEMP_DECIMAL=$((RANDOM % 100))
@@ -40,12 +45,12 @@ while true; do
     BASE64_PAYLOAD=$(echo -n "$PAYLOAD" | base64)
     
     # Send to AWS IoT Core
-    echo "Sending: $PAYLOAD"
+    echo "[$TIMESTAMP] Sending: $PAYLOAD"
     aws iot-data publish \
         --topic "$TOPIC" \
         --payload "$BASE64_PAYLOAD" \
         --region "$AWS_REGION"
-    
+
     # Check if command succeeded
     if [ $? -eq 0 ]; then
         echo "Published successfully ✅"
@@ -54,7 +59,8 @@ while true; do
     fi
     
     echo "-------------------------------"
+    echo "Next update in $INTERVAL seconds..."
     
-    # Wait 5 seconds
-    sleep 5
+    # Wait for the specified interval
+    sleep $INTERVAL
 done

@@ -27,6 +27,9 @@ interface AlertData {
   timestamp: number;
 }
 
+// Constants
+const POLLING_INTERVAL = 60 * 1000; // 1 minute to match data collection interval
+
 class SocketService {
   private io!: SocketIOServer;
   private activePollers = new Map<string, NodeJS.Timeout>();
@@ -150,7 +153,7 @@ class SocketService {
     const interval = setInterval(() => {
       void this.fetchAndSendTelemetryData(cattleId);
       void this.fetchAndSendAlerts(cattleId);
-    }, 5000);
+    }, POLLING_INTERVAL);
 
     this.activePollers.set(cattleId, interval);
   }
